@@ -1,5 +1,1 @@
-[
-  { "file": "1-checklist.jpg", "path": "/", "viewport": { "width": 1280, "height": 800 } },
-  { "file": "2-silver.jpg", "path": "/", "grade": "silver", "viewport": { "width": 1280, "height": 800 } },
-  { "file": "3-bronze.jpg", "path": "/", "grade": "bronze", "scroll": 1400, "viewport": { "width": 1280, "height": 800 } }
-]
+[{"file":"1-cover.jpg","path":"/","view":"cover: header progress, 5-stage roadmap, filters, trophy list with official names/descriptions/grades","viewport":{"height":800,"width":1280}},{"file":"2-guide.jpg","path":"/","view":"silver trophy guide open with missable note and named sources","viewport":{"height":800,"width":1280}},{"file":"3-missable.jpg","path":"/","view":"missable filter active: flagged trophies with reasons","viewport":{"height":800,"width":1280}},{"file":"4-spoiler.jpg","path":"/","view":"spoiler-safe mode on: unearned story trophies hidden","viewport":{"height":800,"width":1280}}]
