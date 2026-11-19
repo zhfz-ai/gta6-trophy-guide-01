@@ -3,74 +3,67 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Leonida Legend — GTA VI Trophy Roadmap &amp; Tracker</title>
+<title>Leonida Legend — GTA VI Trophy Guide &amp; Tracker</title>
+<meta name="description" content="Offline guide and tracker for all 55 PlayStation 5 trophies of Grand Theft Auto VI: roadmap to platinum, missable flags, cited guides.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="top">
-  <div class="titleblock">
-    <h1>Leonida Legend</h1>
-    <p class="subtitle">Grand Theft Auto VI &middot; PlayStation 5 trophy roadmap &amp; tracker &middot; all 55 trophies</p>
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">LL</div>
+    <div>
+      <h1>Leonida Legend</h1>
+      <p class="subtitle">Grand Theft Auto VI &middot; PS5 trophy guide &amp; tracker &middot; works offline</p>
+    </div>
   </div>
-  <div class="progressbox">
-    <p id="progress" class="progressnum">0 of 55 earned</p>
-    <div class="bar" role="progressbar" aria-label="Trophy progress"><div id="barfill"></div></div>
-    <p id="gradecounts" class="gradecounts"></p>
+  <div class="progress-box" role="status" aria-label="Overall progress">
+    <div class="progress-line"><strong id="progress-count">0 / 55</strong><span id="progress-pct">0%</span></div>
+    <div class="progress-bar"><div id="progress-fill"></div></div>
+    <div class="grade-line" id="grade-line"></div>
   </div>
 </header>
 
-<section class="roadmap" aria-label="Roadmap to the platinum">
-  <h2>Roadmap to the platinum</h2>
-  <ol id="stages" class="stages"></ol>
-  <p class="roadnote">Order built from the official descriptions: story chapters and named missions first, then stranger strands, activities and counts, collectibles and exploration, and the money endgame into 100% and the platinum. <strong>Missable</strong> flags mark trophies whose descriptions tie them to a partner, a place, or a moment &mdash; do those while the window is open.</p>
-</section>
-
-<section class="controls" aria-label="Filters and settings">
-  <div class="chiprow" id="kindchips" role="group" aria-label="Filter by kind">
-    <button type="button" data-kind="all" class="chip on">All kinds</button>
-    <button type="button" data-kind="story" class="chip">Story</button>
-    <button type="button" data-kind="missable" class="chip">Missable</button>
-    <button type="button" data-kind="collectibles" class="chip">Collectibles</button>
-    <button type="button" data-kind="activities" class="chip">Activities</button>
-    <button type="button" data-kind="online" class="chip">Online</button>
-  </div>
-  <div class="controlrow">
-    <label>Grade
-      <select id="grade">
-        <option value="all">All grades</option>
-        <option value="platinum">Platinum</option>
-        <option value="gold">Gold</option>
-        <option value="silver">Silver</option>
-        <option value="bronze">Bronze</option>
-      </select>
-    </label>
-    <label>Show
-      <select id="earnedfilter">
-        <option value="all">All trophies</option>
-        <option value="earned">Earned only</option>
-        <option value="remaining">Remaining only</option>
-      </select>
-    </label>
-    <label class="searchlabel">Search <input id="search" type="search" placeholder="name or description"></label>
-    <label class="spoiler"><input id="spoiler" type="checkbox"> Spoiler-safe: hide story trophies until earned</label>
-  </div>
-  <div class="controlrow">
-    <button id="export" type="button">Export progress</button>
-    <label class="import">Import progress <input id="import" type="file" accept="application/json"></label>
-    <button id="reset" type="button">Reset all ticks</button>
-    <span id="shown" class="shown"></span>
-  </div>
-</section>
-
 <main>
-  <p id="empty" class="empty" hidden></p>
-  <ul id="list" class="list"></ul>
+  <section class="panel roadmap" aria-label="Roadmap to platinum">
+    <h2>Roadmap to the platinum <span class="roadmap-note">5 stages, built from the official descriptions</span></h2>
+    <ol class="stages" id="stages"></ol>
+  </section>
+
+  <section class="panel controls" aria-label="Filters and settings">
+    <div class="controls-row">
+      <label class="search-box">
+        <span class="sr-only">Search trophies</span>
+        <input id="search" type="search" placeholder="Search name or description&hellip;" autocomplete="off">
+      </label>
+      <label class="toggle">
+        <input id="spoiler" type="checkbox">
+        <span>Spoiler-safe: hide story trophies until earned</span>
+      </label>
+      <label class="toggle">
+        <input id="hide-earned" type="checkbox">
+        <span>Hide earned</span>
+      </label>
+    </div>
+    <div class="controls-row chips" id="kind-chips" role="group" aria-label="Filter by kind"></div>
+    <div class="controls-row chips" id="grade-chips" role="group" aria-label="Filter by grade"></div>
+    <div class="controls-row actions">
+      <button id="export" type="button">Export progress</button>
+      <button id="import-btn" type="button">Import progress</button>
+      <input id="import-file" type="file" accept="application/json,.json" hidden>
+      <button id="reset" type="button" class="danger">Reset all</button>
+      <span class="save-note" id="save-note">Progress saves in this browser (localStorage).</span>
+    </div>
+  </section>
+
+  <p class="result-line" id="result-line" role="status"></p>
+  <section class="list" id="list" aria-label="Trophy checklist"></section>
+  <p class="empty" id="empty" hidden>No trophies match the current filters.</p>
+
+  <footer class="foot">
+    <p>Official trophy names, descriptions and grades as published on PlayStation (55 trophies: 1 platinum, 2 gold, 6 silver, 46 bronze). Every guide is written for this entry and names its sources beside the text — sources are cited, never copied. Missable flags are derived from the official descriptions: stranger strands, partner trophies, choice counts and story-window locations.</p>
+  </footer>
 </main>
 
-<footer>
-  <p><strong>Sources &amp; honesty:</strong> trophy names, descriptions, and grades are the official PlayStation 5 list as published (via Exophase and PSNProfiles, which agree on every entry). Every guide below is written for this page in its own words and names its sources; where a description is cryptic, the guide says so and labels its reading as an inference. No locations, counts, or steps are invented beyond what the official descriptions state. Progress is saved only in this browser (localStorage) and moves only when you export or import it. This is an unofficial fan-made guide with its own look; it uses no Rockstar Games logo, artwork, or screenshots.</p>
-</footer>
-
-<script type="module" src="app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
