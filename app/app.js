@@ -1,9 +1,12 @@
-// Leonida Legend — offline tracker for the 55 GTA VI PS5 trophies (round 2).
-// Loads data/trophies.json (this app's own file), keeps earned ticks and
-// per-trophy counter progress in localStorage, and renders the 5-stage
-// roadmap with trophy chips, a Next Up strip, a Missable Watch panel,
-// kind/grade filters, sorting, search, spoiler-safe mode, and one cited
-// guide per trophy (Where line, prose, numbered steps, sources with notes).
+// Leonida Legend — offline tracker for the 55 GTA VI PS5 trophies (round 3).
+// Loads data/trophies.json (this app's own file), keeps earned ticks,
+// per-trophy counter progress and per-trophy notes in localStorage, and
+// renders the 5-stage roadmap with trophy chips, stage missable warnings
+// and tracked-item totals, a Next Up strip, a Closest Counters planner
+// strip, a Missable Watch panel, a Sources panel aggregating every cited
+// source, kind/grade filters, sorting, search, spoiler-safe mode, keyboard
+// shortcuts, and one cited guide per trophy (Where line, prose, numbered
+// steps, sources with notes, a note field, an honesty line).
 // No network requests: the only fetch is the app's own data file.
 
 const STORAGE_KEY = "leonida-legend-progress-v2";
@@ -24,6 +27,7 @@ const state = {
   trophies: [],
   earned: new Set(),
   counters: {}, // trophy id -> progress number (counted trophies only)
+  notes: {}, // trophy id -> the player's own note text
   kind: "all",
   grade: "all",
   sort: "roadmap",
@@ -37,6 +41,12 @@ const el = (id) => document.getElementById(id);
 const byId = (id) => state.trophies.find((t) => t.id === id);
 const fmt = (n) => n.toLocaleString("en-US");
 
+// Roadmap position of each trophy (stage, then id): "step N of 55".
+let stepOf = new Map();
+function computeSteps() {
+  stepOf = new Map(roadmapOrder(state.trophies).map((t, i) => [t.id, i + 1]));
+}
+
 function loadProgress() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -47,6 +57,12 @@ function loadProgress() {
         for (const [k, v] of Object.entries(data.counters)) {
           const id = Number(k);
           if (Number.isInteger(id) && Number.isFinite(v) && v > 0) state.counters[id] = Math.floor(v);
+        }
+      }
+      if (data.notes && typeof data.notes === "object") {
+        for (const [k, v] of Object.entries(data.notes)) {
+          const id = Number(k);
+          if (Number.isInteger(id) && typeof v === "string" && v.trim()) state.notes[id] = v;
         }
       }
       return;
@@ -63,6 +79,7 @@ function saveProgress() {
   const payload = {
     earned: [...state.earned].sort((a, b) => a - b),
     counters: state.counters,
+    notes: state.notes,
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
@@ -105,6 +122,16 @@ function applyUrlPreset() {
   if (focus) {
     const id = Number(focus);
     if (Number.isInteger(id) && id > 0) state.open.add(id);
+  }
+  const note = q.get("note");
+  if (note) {
+    for (const part of note.split(";")) {
+      const cut = part.indexOf(":");
+      if (cut < 1) continue;
+      const id = Number(part.slice(0, cut));
+      const text = part.slice(cut + 1).trim();
+      if (Number.isInteger(id) && id > 0 && text) state.notes[id] = text;
+    }
   }
   const query = q.get("q");
   if (query) state.query = query.trim().toLowerCase();
@@ -201,12 +228,16 @@ function renderStages() {
     const all = roadmapOrder(state.trophies.filter((t) => t.stage === s.n));
     const got = all.filter((t) => state.earned.has(t.id)).length;
     const pct = all.length ? Math.round((got / all.length) * 100) : 0;
+    const miss = all.filter((t) => t.missable).length;
+    const tracked = all.reduce((sum, t) => sum + (t.count || 0), 0);
     return `<li class="stage">
       <div class="stage-num">Stage ${s.n}</div>
       <h3>${s.title}</h3>
       <p>${s.text}</p>
       <div class="stage-bar"><div class="stage-fill" style="width:${pct}%"></div></div>
       <div class="stage-count">${got} / ${all.length} trophies earned</div>
+      ${miss ? `<div class="stage-warn">⚠ ${miss} missable in this stage</div>` : ""}
+      ${tracked ? `<div class="stage-tracked">tracks ${fmt(tracked)} items &amp; dollars</div>` : ""}
       <div class="stage-chips">${all.map(stageChip).join("")}</div>
     </li>`;
   }).join("");
@@ -216,6 +247,50 @@ function renderStages() {
     (next.length
       ? next.map((t) => `<button type="button" class="next-chip" data-jump="${t.id}">${displayName(t)} <span class="next-meta">stage ${t.stage} · ${t.grade}${t.missable ? " · missable" : ""}</span></button>`).join("")
       : `<span class="next-done">All 55 earned — platinum unlocked. 🏆</span>`);
+}
+
+function renderClosest() {
+  const started = state.trophies
+    .filter((t) => t.count && !state.earned.has(t.id) && (state.counters[t.id] ?? 0) > 0)
+    .map((t) => ({ t, value: Math.min(state.counters[t.id], t.count) }))
+    .sort((a, b) => (b.value / b.t.count) - (a.value / a.t.count))
+    .slice(0, 4);
+  el("closest-counters").innerHTML =
+    `<span class="next-label">Closest counters</span>` +
+    (started.length
+      ? started.map(({ t, value }) => {
+          const pct = Math.round((value / t.count) * 100);
+          return `<button type="button" class="closest-chip" data-jump="${t.id}">
+            <span class="closest-name">${displayName(t)}</span>
+            <span class="closest-num">${fmt(value)} / ${fmt(t.count)} · ${pct}%</span>
+            <span class="closest-bar"><span class="closest-fill" style="width:${pct}%"></span></span>
+          </button>`;
+        }).join("")
+      : `<span class="closest-empty">No counter started yet — open a counted trophy below and set your progress.</span>`);
+}
+
+function renderSources() {
+  const bySite = new Map();
+  let distinct = 0;
+  const seenNames = new Set();
+  for (const t of state.trophies) {
+    for (const s of t.sources || []) {
+      if (!seenNames.has(s.name)) { seenNames.add(s.name); distinct += 1; }
+      const site = s.name.split(" — ")[0];
+      if (!bySite.has(site)) bySite.set(site, { url: s.url, trophies: new Set(), pages: new Set() });
+      const row = bySite.get(site);
+      row.trophies.add(t.id);
+      row.pages.add(s.name);
+    }
+  }
+  el("source-count").textContent = `${distinct} cited pages across ${bySite.size} sites`;
+  el("source-list").innerHTML = [...bySite.entries()]
+    .sort((a, b) => b[1].trophies.size - a[1].trophies.size)
+    .map(([site, row]) => `<li class="source-row">
+      <a href="${row.url}" target="_blank" rel="noopener noreferrer">${site}</a>
+      <span class="source-meta">cited by ${row.trophies.size} of ${state.trophies.length} guides · ${row.pages.size} page${row.pages.size === 1 ? "" : "s"}</span>
+    </li>`)
+    .join("");
 }
 
 function renderMissableWatch() {
@@ -265,6 +340,15 @@ function sourceLine(t) {
   return `<p class="sources">Sources: ${links}</p>`;
 }
 
+function stepperButtons(t) {
+  const steps = [-1, 1];
+  if (t.count >= 50) steps.push(10);
+  if (t.count >= 1000) steps.push(100);
+  return steps.map((d) =>
+    `<button type="button" class="stepper" data-step="${t.id}:${d}" aria-label="Adjust progress for ${t.name} by ${d}">${d > 0 ? "+" + d : d}</button>`
+  ).join("");
+}
+
 function counterHtml(t) {
   if (!t.count) return "";
   const value = Math.min(state.counters[t.id] ?? 0, t.count);
@@ -274,8 +358,32 @@ function counterHtml(t) {
     <label class="counter-label" for="count-${t.id}">Progress</label>
     <input id="count-${t.id}" class="counter-input" type="number" min="0" max="${t.count}" step="1" value="${value}" data-count="${t.id}" aria-label="Your progress toward ${t.name}">
     <span class="counter-of">/ ${fmt(t.count)}</span>
+    <span class="steppers">${stepperButtons(t)}</span>
     <span class="counter-bar"><span class="counter-fill" style="width:${pct}%"></span></span>
     <span class="counter-pct">${pct}%${done ? " ✓" : ""}</span>
+  </div>`;
+}
+
+function setCounter(id, value) {
+  const t = byId(id);
+  if (!t || !t.count) return;
+  const prev = state.counters[id] ?? 0;
+  let v = Math.floor(Number(value));
+  if (!Number.isFinite(v) || v < 0) v = 0;
+  if (v > t.count) v = t.count;
+  if (v > 0) state.counters[id] = v; else delete state.counters[id];
+  if (v >= t.count) state.earned.add(id);
+  else if (prev >= t.count) state.earned.delete(id);
+  saveProgress();
+  render();
+}
+
+function noteHtml(t) {
+  const text = state.notes[t.id] ?? "";
+  const safe = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return `<div class="note-box">
+    <label class="note-label" for="note-${t.id}">Your note</label>
+    <textarea id="note-${t.id}" class="note-input" rows="2" data-note="${t.id}" placeholder="e.g. last race saved for the end…" aria-label="Your note for ${t.name}">${safe}</textarea>
   </div>`;
 }
 
@@ -287,6 +395,8 @@ function guideHtml(t) {
     <p>${t.guide}</p>
     ${steps ? `<ol class="steps">${steps}</ol>` : ""}
     ${sourceLine(t)}
+    <p class="honesty">Written from the official description and the sources above — not yet verified in-game.</p>
+    ${noteHtml(t)}
   </div>`;
 }
 
@@ -300,8 +410,10 @@ function cardHtml(t) {
     `<span class="badge grade-${t.grade}">${t.grade}</span>`,
     `<span class="badge">${t.kind}</span>`,
     `<span class="badge">stage ${t.stage}</span>`,
+    `<span class="badge step">step ${stepOf.get(t.id) ?? "–"} of ${state.trophies.length}</span>`,
     t.missable ? `<span class="badge missable">missable</span>` : "",
     t.count ? `<span class="badge count">count: ${fmt(t.count)}</span>` : "",
+    state.notes[t.id] ? `<span class="badge note">✎ note</span>` : "",
   ].join("");
   return `<article class="card${earned ? " earned" : ""}" id="trophy-${t.id}">
     <div class="card-head">
@@ -342,17 +454,20 @@ function renderList() {
     });
   }
   for (const input of el("list").querySelectorAll("[data-count]")) {
-    input.addEventListener("change", () => {
-      const id = Number(input.dataset.count);
-      const t = byId(id);
-      if (!t || !t.count) return;
-      const prev = state.counters[id] ?? 0;
-      let value = Math.floor(Number(input.value));
-      if (!Number.isFinite(value) || value < 0) value = 0;
-      if (value > t.count) value = t.count;
-      if (value > 0) state.counters[id] = value; else delete state.counters[id];
-      if (value >= t.count) state.earned.add(id);
-      else if (prev >= t.count) state.earned.delete(id);
+    input.addEventListener("change", () => setCounter(Number(input.dataset.count), input.value));
+  }
+  for (const btn of el("list").querySelectorAll("[data-step]")) {
+    btn.addEventListener("click", () => {
+      const [idRaw, deltaRaw] = btn.dataset.step.split(":");
+      const id = Number(idRaw);
+      setCounter(id, (state.counters[id] ?? 0) + Number(deltaRaw));
+    });
+  }
+  for (const area of el("list").querySelectorAll("[data-note]")) {
+    area.addEventListener("change", () => {
+      const id = Number(area.dataset.note);
+      const text = area.value.trim();
+      if (text) state.notes[id] = text; else delete state.notes[id];
       saveProgress();
       render();
     });
@@ -362,7 +477,9 @@ function renderList() {
 function render() {
   renderHeader();
   renderStages();
+  renderClosest();
   renderMissableWatch();
+  renderSources();
   renderChips();
   renderList();
   for (const btn of document.querySelectorAll("[data-jump]")) {
@@ -373,10 +490,11 @@ function render() {
 function exportProgress() {
   const payload = {
     app: "leonida-legend",
-    version: 2,
+    version: 3,
     exported: new Date().toISOString(),
     earned: [...state.earned].sort((a, b) => a - b),
     counters: state.counters,
+    notes: state.notes,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
@@ -403,9 +521,16 @@ function importProgress(file) {
           }
         }
       }
+      state.notes = {};
+      if (data && !Array.isArray(data) && data.notes && typeof data.notes === "object") {
+        for (const [k, v] of Object.entries(data.notes)) {
+          const id = Number(k);
+          if (byId(id) && typeof v === "string" && v.trim()) state.notes[id] = v;
+        }
+      }
       saveProgress();
       render();
-      el("save-note").textContent = `Imported ${state.earned.size} earned trophies and ${Object.keys(state.counters).length} counters.`;
+      el("save-note").textContent = `Imported ${state.earned.size} earned trophies, ${Object.keys(state.counters).length} counters and ${Object.keys(state.notes).length} notes.`;
     } catch {
       el("save-note").textContent = "Import failed: not a progress file from this tracker.";
     }
@@ -423,8 +548,29 @@ function wireControls() {
   el("reset").addEventListener("click", () => {
     state.earned.clear();
     state.counters = {};
+    state.notes = {};
     saveProgress();
     render();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return;
+    if (e.key === "/") {
+      e.preventDefault();
+      el("search").focus();
+    } else if (e.key === "s") {
+      state.spoiler = !state.spoiler;
+      el("spoiler").checked = state.spoiler;
+      render();
+    } else if (e.key === "m") {
+      state.kind = state.kind === "missable" ? "all" : "missable";
+      render();
+    } else if (e.key === "a") {
+      state.kind = "all";
+      state.grade = "all";
+      render();
+    }
   });
   el("spoiler").checked = state.spoiler;
   el("sort").value = state.sort;
@@ -437,6 +583,7 @@ async function boot() {
   const res = await fetch("data/trophies.json");
   const data = await res.json();
   state.trophies = Array.isArray(data) ? data : data.trophies;
+  computeSteps();
   // Counters that already reach their target count as earned.
   for (const t of state.trophies) {
     if (t.count && (state.counters[t.id] ?? 0) >= t.count) state.earned.add(t.id);

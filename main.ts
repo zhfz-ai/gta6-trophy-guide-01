@@ -1,11 +1,13 @@
 // Leonida Legend — make.fun entry program (Node 22, standard library only).
 // The guide lives in this repo's app/ folder: plain static files opened at
 // app/index.html, fully offline, holding the 55-trophy list, the 5-stage
-// roadmap with trophy chips, the Missable Watch panel, per-trophy progress
-// counters and one cited guide per trophy in app/data/trophies.json. This
-// program hands the entry in: it copies app/ and screenshots/ to /output
-// and writes /output/dossier.json with the vendored make.fun library, so
-// the judge reads exactly these files.
+// roadmap with trophy chips, stage missable warnings and step numbers, a
+// Closest Counters planner strip, the Missable Watch panel, a Sources
+// panel, per-trophy progress counters with steppers, per-trophy notes,
+// keyboard shortcuts and one cited guide per trophy in
+// app/data/trophies.json. This program hands the entry in: it copies app/
+// and screenshots/ to /output and writes /output/dossier.json with the
+// vendored make.fun library, so the judge reads exactly these files.
 // vendor/makefun-frontend.ts must stay byte-identical to the kit's copy —
 // the scorer rebuilds the dossier with its own copy and compares bytes.
 //

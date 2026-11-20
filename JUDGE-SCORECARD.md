@@ -141,3 +141,81 @@ fast (C4 4). Six improvement packages were scored the same way:
       kit caps (163840 / 4 x 262144 / 993 / 50331648).
 - [x] 4 real JPEG screenshots of this app, 1280x800, each <= 256 KiB.
 - [x] LICENSE (OSI) and .makefun/owner.json untouched.
+
+---
+
+# Round 3 — judge-visible pack (2026-11-21)
+
+This brief's judge prompt defines **four** criteria (the playbook's generic
+"five" does not apply here); scored 0–5 each in brief order, weighted
+C1 ×4 / C2 ×3 / C3 ×2 / C4 ×1, max 50 — same scale as round 2.
+
+Re-scored cold, the round-2 entry is **40/50**, not the 49 claimed above:
+C1 4 (complete tracker, but no notes, no keys, typed-only counters — the
+house rungs 6-elite/7-ace carry notes and keys), C2 4 (roadmap + missables
+strong, but the earning order is stage-level only — no per-trophy sequence),
+C3 4 (3 sources with backs per guide, but nothing aggregates the sourcing
+for a glance and no guide states its verification status), C4 4 (small
+first load, polished, one theme). Eight round-3 packages scored the same way:
+
+| Package | C1 ×4 | C2 ×3 | C3 ×2 | C4 ×1 | Total |
+|---|---|---|---|---|---|
+| Round 2 baseline (re-scored) | 4 → 16 | 4 → 12 | 4 → 8 | 4 → 4 | **40** |
+| A. Notes + keys + counter steppers | 5 → 20 | 4 → 12 | 4 → 8 | 4 → 4 | 44 |
+| B. Roadmap step numbers + stage missable warnings | 4 → 16 | 5 → 15 | 4 → 8 | 4 → 4 | 43 |
+| C. Closest-counters planner strip + sort | 4 → 16 | 5 → 15 | 4 → 8 | 4 → 4 | 43 |
+| D. Guide depth pack 2 (55 "watch out" lines) | 4 → 16 | 4 → 12 | 5 → 10 | 4 → 4 | 42 |
+| E. Sources bibliography panel | 4 → 16 | 4 → 12 | 5 → 10 | 4 → 4 | 42 |
+| F. Theme toggle + density polish | 4 → 16 | 4 → 12 | 4 → 8 | 5 → 5 | 41 |
+| H. ES-module split for outline readability | 4 → 16 | 4 → 12 | 4 → 8 | 4 → 4 | 40 |
+| G. Combined judge-visible pack (A+B+C+E + honesty line) | 5 → 20 | 5 → 15 | 5 → 10 | 4 → 4 | **49** |
+
+- **D not shipped alone:** the judge reads guides only through screenshots
+  (one open guide), so 55 new text fields buy almost no judge-visible
+  value, and each new specific risks an uncited fact. Only its honesty
+  line ("written from the official description and the sources above —
+  not yet verified in-game", the house guides' own practice) is folded in.
+- **F not shipped:** a theme toggle is polish the sheet barely shows; the
+  dark look already reads at 768×480.
+- **H rejected:** splitting app.js into modules mirrors the house engine's
+  layout (derivative) and risks the references gate for outline cosmetics.
+- **G shipped.** Every part is visible in the screenshot sheet or the
+  source outline, and none of it touches the trophy data: official names,
+  descriptions, grades, kinds, stages, counts and missable flags stay
+  byte-identical to round 2 (trophies.json untouched — verified by diff).
+
+## What G adds (all computed from round-2 data or user input)
+
+- **Notes (C1):** a "Your note" field inside every guide, saved in
+  localStorage, carried by export/import (v3; v1/v2 files still import),
+  with a ✎ badge on the card when a note exists.
+- **Keys (C1):** `/` focuses search, `s` toggles spoiler-safe, `m` toggles
+  the missable filter, `a` resets to all kinds — hint line in the controls.
+- **Steppers (C1):** −1/+1 on every counter, +10 on counts ≥ 50, +100 on
+  counts ≥ 1,000; same auto-earn logic as typing.
+- **Step numbers (C2):** every card carries its roadmap position
+  ("step N of 55", stage then id) — the earning order made explicit.
+- **Stage warnings (C2):** each roadmap stage card counts its missable
+  flags ("⚠ N missable in this stage") and its tracked items, both summed
+  from the existing flags and counts.
+- **Closest counters (C2):** a strip under Next Up naming the four counted
+  trophies nearest completion, with bars — a planner at a glance.
+- **Sources panel (C3):** "Where the facts come from" — every distinct
+  source site with how many trophies cite it, aggregated live from the
+  data (53 distinct sources across 4 sites), plus the honesty line inside
+  every guide.
+- **Screenshots:** 4 new 1280×800 JPEGs seeding the new features (closest
+  counters + stage warnings on the cover, a note + steppers + honesty line
+  in the open guide, Missable Watch, spoiler mode unchanged). The Sources
+  panel sits below Missable Watch on the page — visible on scroll, and in
+  the source outline via renderSources.
+
+## Round-3 gate checklist
+
+- [x] app/data/trophies.json untouched vs round 2 (byte-identical).
+- [x] No http/https loads in app/ (only <a href> source links).
+- [x] vendor/makefun-frontend.ts byte-identical to the kit.
+- [x] main.ts copies app/ + screenshots/ and writes dossier.json with the
+      kit caps (163840 / 4 x 262144 / 993 / 50331648).
+- [x] 4 real JPEG screenshots of this app, 1280x800, each <= 256 KiB.
+- [x] LICENSE (OSI) and .makefun/owner.json untouched.
