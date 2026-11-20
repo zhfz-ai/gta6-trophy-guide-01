@@ -1,10 +1,11 @@
 // Leonida Legend — make.fun entry program (Node 22, standard library only).
 // The guide lives in this repo's app/ folder: plain static files opened at
 // app/index.html, fully offline, holding the 55-trophy list, the 5-stage
-// roadmap, missable flags and one cited guide per trophy in
-// app/data/trophies.json. This program hands the entry in: it copies app/
-// and screenshots/ to /output and writes /output/dossier.json with the
-// vendored make.fun library, so the judge reads exactly these files.
+// roadmap with trophy chips, the Missable Watch panel, per-trophy progress
+// counters and one cited guide per trophy in app/data/trophies.json. This
+// program hands the entry in: it copies app/ and screenshots/ to /output
+// and writes /output/dossier.json with the vendored make.fun library, so
+// the judge reads exactly these files.
 // vendor/makefun-frontend.ts must stay byte-identical to the kit's copy —
 // the scorer rebuilds the dossier with its own copy and compares bytes.
 //
@@ -12,7 +13,7 @@
 // Outside the grader, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildDossier } from "./vendor/makefun-frontend.ts";
@@ -35,5 +36,14 @@ const dossier = buildDossier(outputDir, {
   app_max_files: 993,
   app_max_bytes: 50331648,
 });
-writeFileSync(join(outputDir, "dossier.json"), dossier);
-console.log(`dossier written to ${join(outputDir, "dossier.json")}`);
+const dossierPath = join(outputDir, "dossier.json");
+writeFileSync(dossierPath, dossier);
+
+// Build summary: what the grader will read, at a glance.
+const shotsDir = join(outputDir, "screenshots");
+const shots = existsSync(shotsDir)
+  ? readdirSync(shotsDir).filter((f) => /\.(jpe?g|png)$/i.test(f)).sort()
+  : [];
+const dossierBytes = statSync(dossierPath).size;
+console.log(`dossier written to ${dossierPath}`);
+console.log(`build summary: dossier ${dossierBytes} bytes, ${shots.length} screenshot(s): ${shots.join(", ") || "none"}`);

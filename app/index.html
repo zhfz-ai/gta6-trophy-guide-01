@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Leonida Legend — GTA VI Trophy Guide &amp; Tracker</title>
-<meta name="description" content="Offline guide and tracker for all 55 PlayStation 5 trophies of Grand Theft Auto VI: roadmap to platinum, missable flags, cited guides.">
+<meta name="description" content="Offline guide and tracker for all 55 PlayStation 5 trophies of Grand Theft Auto VI: roadmap to platinum, missable flags, counters, cited guides.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,12 +21,19 @@
     <div class="progress-bar"><div id="progress-fill"></div></div>
     <div class="grade-line" id="grade-line"></div>
   </div>
+  <div class="stats-strip" id="stats-strip" aria-label="List at a glance"></div>
 </header>
 
 <main>
   <section class="panel roadmap" aria-label="Roadmap to platinum">
-    <h2>Roadmap to the platinum <span class="roadmap-note">5 stages, built from the official descriptions</span></h2>
+    <h2>Roadmap to the platinum <span class="roadmap-note">5 stages, built from the official descriptions — tap a chip to jump to its guide</span></h2>
+    <div class="next-up" id="next-up" aria-label="Next trophies to earn"></div>
     <ol class="stages" id="stages"></ol>
+  </section>
+
+  <section class="panel missable-watch" aria-label="Missable trophies watch list">
+    <h2>Missable Watch <span class="roadmap-note" id="missable-count"></span></h2>
+    <ul class="watch-list" id="missable-list"></ul>
   </section>
 
   <section class="panel controls" aria-label="Filters and settings">
@@ -34,6 +41,15 @@
       <label class="search-box">
         <span class="sr-only">Search trophies</span>
         <input id="search" type="search" placeholder="Search name or description&hellip;" autocomplete="off">
+      </label>
+      <label class="sort-box">
+        <span>Sort</span>
+        <select id="sort">
+          <option value="roadmap">Roadmap order</option>
+          <option value="grade">Grade (platinum first)</option>
+          <option value="count">Biggest count</option>
+          <option value="name">Name A–Z</option>
+        </select>
       </label>
       <label class="toggle">
         <input id="spoiler" type="checkbox">
@@ -51,7 +67,7 @@
       <button id="import-btn" type="button">Import progress</button>
       <input id="import-file" type="file" accept="application/json,.json" hidden>
       <button id="reset" type="button" class="danger">Reset all</button>
-      <span class="save-note" id="save-note">Progress saves in this browser (localStorage).</span>
+      <span class="save-note" id="save-note">Progress and counters save in this browser (localStorage).</span>
     </div>
   </section>
 
@@ -60,7 +76,7 @@
   <p class="empty" id="empty" hidden>No trophies match the current filters.</p>
 
   <footer class="foot">
-    <p>Official trophy names, descriptions and grades as published on PlayStation (55 trophies: 1 platinum, 2 gold, 6 silver, 46 bronze). Every guide is written for this entry and names its sources beside the text — sources are cited, never copied. Missable flags are derived from the official descriptions: stranger strands, partner trophies, choice counts and story-window locations.</p>
+    <p>Official trophy names, descriptions and grades as published on PlayStation (55 trophies: 1 platinum, 2 gold, 6 silver, 46 bronze; 28 hidden on PlayStation until earned). Every guide is written for this entry and names three sources beside the text, each with a note on what it backs — sources are cited, never copied. Missable flags are derived from the official descriptions: stranger strands, partner trophies, choice counts and story-window locations. Counted trophies carry a progress counter: type your current number and the trophy ticks itself earned when the count is reached.</p>
   </footer>
 </main>
 
