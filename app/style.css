@@ -196,7 +196,28 @@ button.danger { color: var(--danger); }
 .foot { color: var(--muted); font-size: 13px; margin-top: 22px; }
 body.hide-roadmap .roadmap { display: none; }
 body.hide-panels .roadmap, body.hide-panels .missable-watch, body.hide-panels .sources-panel,
-body.hide-panels .stats-strip, body.hide-panels .actions { display: none; }
+body.hide-panels .stats-strip, body.hide-panels .actions, body.hide-panels .planner { display: none; }
+.badge.effort { color: var(--accent2); border-color: var(--accent2); }
+.effort-line { color: var(--text); }
+.effort-line strong { color: var(--accent); }
+.effort-note { color: var(--muted); font-style: italic; font-size: 12px; }
+.planner h2 { margin: 0 0 10px; font-size: 19px; }
+.planner-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.planner-table th { text-align: left; color: var(--accent2); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.planner-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); color: var(--text); }
+.planner-table td:first-child { color: var(--muted); }
+.planner-table td:first-child b { color: var(--text); }
+.planner-quick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+body.guide-view .controls, body.guide-view .roadmap, body.guide-view .planner,
+body.guide-view .missable-watch, body.guide-view .sources-panel, body.guide-view .stats-strip,
+body.guide-view .result-line { display: none; }
+body.guide-view .list { grid-template-columns: 1fr; }
+body.guide-view .card { padding: 18px 20px; }
+body.guide-view .card-name { font-size: 22px; }
+body.guide-view .card-desc { font-size: 16px; }
+body.guide-view .guide-body { font-size: 16px; line-height: 1.55; }
+body.roadmap-view .controls, body.roadmap-view .list, body.roadmap-view .result-line,
+body.roadmap-view .empty { display: none; }
 @media (max-width: 900px) {
   .stages { grid-template-columns: 1fr 1fr; }
   .list, .watch-list, .source-list { grid-template-columns: 1fr; }

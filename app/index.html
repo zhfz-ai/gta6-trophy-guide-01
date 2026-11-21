@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Leonida Legend — GTA VI Trophy Guide &amp; Tracker</title>
-<meta name="description" content="Offline guide and tracker for all 55 PlayStation 5 trophies of Grand Theft Auto VI: roadmap to platinum, missable flags, counters, cited guides.">
+<meta name="description" content="Offline guide and tracker for all 55 PlayStation 5 trophies of Grand Theft Auto VI: roadmap to platinum, missable flags, counters, effort estimates, cited guides.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,34 +20,17 @@
     <div class="progress-line"><strong id="progress-count">0 / 55</strong><span id="progress-pct">0%</span></div>
     <div class="progress-bar"><div id="progress-fill"></div></div>
     <div class="grade-line" id="grade-line"></div>
+    <div class="grade-line" id="kind-line"></div>
   </div>
   <div class="stats-strip" id="stats-strip" aria-label="List at a glance"></div>
 </header>
 
 <main>
-  <section class="panel roadmap" aria-label="Roadmap to platinum">
-    <h2>Roadmap to the platinum <span class="roadmap-note">5 stages, built from the official descriptions — tap a chip to jump to its guide</span></h2>
-    <div class="next-up" id="next-up" aria-label="Next trophies to earn"></div>
-    <div class="closest" id="closest-counters" aria-label="Counters closest to done"></div>
-    <ol class="stages" id="stages"></ol>
-  </section>
-
-  <section class="panel missable-watch" aria-label="Missable trophies watch list">
-    <h2>Missable Watch <span class="roadmap-note" id="missable-count"></span></h2>
-    <ul class="watch-list" id="missable-list"></ul>
-  </section>
-
-  <section class="panel sources-panel" aria-label="Where the facts come from">
-    <h2>Where the facts come from <span class="roadmap-note" id="source-count"></span></h2>
-    <ul class="source-list" id="source-list"></ul>
-    <p class="source-note">Every guide names three sources beside its text, each with a note on what it backs. Sources are cited, never copied; a link opens only when you follow it — this app itself fetches nothing but its own data file.</p>
-  </section>
-
   <section class="panel controls" aria-label="Filters and settings">
     <div class="controls-row">
       <label class="search-box">
         <span class="sr-only">Search trophies</span>
-        <input id="search" type="search" placeholder="Search name or description&hellip;" autocomplete="off">
+        <input id="search" type="search" placeholder="Search name, description or guide&hellip;" autocomplete="off">
       </label>
       <label class="sort-box">
         <span>Sort</span>
@@ -56,6 +39,7 @@
           <option value="grade">Grade (platinum first)</option>
           <option value="count">Biggest count</option>
           <option value="name">Name A–Z</option>
+          <option value="quick">Quickest first</option>
         </select>
       </label>
       <label class="toggle">
@@ -73,9 +57,11 @@
       <button id="export" type="button">Export progress</button>
       <button id="import-btn" type="button">Import progress</button>
       <input id="import-file" type="file" accept="application/json,.json" hidden>
+      <button id="expand-all" type="button">Expand all guides</button>
+      <button id="collapse-all" type="button">Collapse all</button>
       <button id="reset" type="button" class="danger">Reset all</button>
       <span class="save-note" id="save-note">Progress, counters and notes save in this browser (localStorage).</span>
-      <span class="keys-hint">Keys: <kbd>/</kbd> search &middot; <kbd>s</kbd> spoiler &middot; <kbd>m</kbd> missables &middot; <kbd>a</kbd> all kinds</span>
+      <span class="keys-hint">Keys: <kbd>/</kbd> search &middot; <kbd>s</kbd> spoiler &middot; <kbd>m</kbd> missables &middot; <kbd>a</kbd> all kinds &middot; <kbd>e</kbd> expand all</span>
     </div>
   </section>
 
@@ -83,8 +69,32 @@
   <section class="list" id="list" aria-label="Trophy checklist"></section>
   <p class="empty" id="empty" hidden>No trophies match the current filters.</p>
 
+  <section class="panel roadmap" aria-label="Roadmap to platinum">
+    <h2>Roadmap to the platinum <span class="roadmap-note">5 stages, built from the official descriptions — tap a chip to jump to its guide</span></h2>
+    <div class="next-up" id="next-up" aria-label="Next trophies to earn"></div>
+    <div class="closest" id="closest-counters" aria-label="Counters closest to done"></div>
+    <ol class="stages" id="stages"></ol>
+  </section>
+
+  <section class="panel planner" aria-label="Platinum planner">
+    <h2>Platinum Planner <span class="roadmap-note" id="planner-note"></span></h2>
+    <div id="planner-body"></div>
+    <p class="source-note">Estimates are computed from the official counts PlayStation tracks (250 stunts, 42 Shooting Range golds, 500 choices&hellip;) and your own saved counters — they shrink as you bank progress. Facts come from the sources cited in each guide.</p>
+  </section>
+
+  <section class="panel missable-watch" aria-label="Missable trophies watch list">
+    <h2>Missable Watch <span class="roadmap-note" id="missable-count"></span></h2>
+    <ul class="watch-list" id="missable-list"></ul>
+  </section>
+
+  <section class="panel sources-panel" aria-label="Where the facts come from">
+    <h2>Where the facts come from <span class="roadmap-note" id="source-count"></span></h2>
+    <ul class="source-list" id="source-list"></ul>
+    <p class="source-note">Every guide names three sources beside its text, each with a note on what it backs. Sources are cited, never copied; a link opens only when you follow it — this app itself fetches nothing but its own data file.</p>
+  </section>
+
   <footer class="foot">
-    <p>Official trophy names, descriptions and grades as published on PlayStation (55 trophies: 1 platinum, 2 gold, 6 silver, 46 bronze; 28 hidden on PlayStation until earned). Every guide is written for this entry and names three sources beside the text, each with a note on what it backs — sources are cited, never copied. Missable flags are derived from the official descriptions: stranger strands, partner trophies, choice counts and story-window locations. Counted trophies carry a progress counter with steppers: set your current number and the trophy ticks itself earned when the count is reached. Every guide has a note field for your own reminders, and each card shows its step in the roadmap order.</p>
+    <p>Official trophy names, descriptions and grades as published on PlayStation (55 trophies: 1 platinum, 2 gold, 6 silver, 46 bronze; 28 hidden on PlayStation until earned). Every guide is written for this entry and names three sources beside the text, each with a note on what it backs — sources are cited, never copied. Missable flags are derived from the official descriptions: stranger strands, partner trophies, choice counts and story-window locations. Counted trophies carry a progress counter with steppers: set your current number and the trophy ticks itself earned when the count is reached. Every card shows an effort estimate and difficulty dots computed from the official count, its step in the roadmap order, and a note field for your own reminders.</p>
   </footer>
 </main>
 

@@ -1,20 +1,91 @@
-// Leonida Legend — offline tracker for the 55 GTA VI PS5 trophies (round 3).
+// Leonida Legend — offline tracker for the 55 GTA VI PS5 trophies (round 4).
 // Loads data/trophies.json (this app's own file), keeps earned ticks,
 // per-trophy counter progress and per-trophy notes in localStorage, and
-// renders the 5-stage roadmap with trophy chips, stage missable warnings
-// and tracked-item totals, a Next Up strip, a Closest Counters planner
-// strip, a Missable Watch panel, a Sources panel aggregating every cited
-// source, kind/grade filters, sorting, search, spoiler-safe mode, keyboard
-// shortcuts, and one cited guide per trophy (Where line, prose, numbered
+// renders the checklist first (official name, description and grade on
+// every card, effort estimate and difficulty dots computed from the
+// official count), the 5-stage roadmap with trophy chips, stage missable
+// warnings, tracked-item totals and stage time estimates, a Next Up
+// strip, a Closest Counters planner strip, a Platinum Planner panel
+// (what is left per stage, estimated time left, quick-win session picks),
+// a Missable Watch panel, a Sources panel aggregating every cited
+// source, kind/grade filters, sorting (roadmap, grade, biggest count,
+// name, quickest first), search over names, descriptions and guide text,
+// spoiler-safe mode, expand/collapse all guides, keyboard shortcuts, and
+// one cited guide per trophy (Where line, effort line, prose, numbered
 // steps, sources with notes, a note field, an honesty line).
 // No network requests: the only fetch is the app's own data file.
 
 const STORAGE_KEY = "leonida-legend-progress-v2";
 const LEGACY_KEY = "leonida-legend-progress-v1";
 const KINDS = ["story", "missable", "collectibles", "activities", "meta"];
+
+// Effort model (round 4): a per-trophy time estimate and difficulty
+// rating computed ONLY from the official data already on the card — the
+// tracked count PlayStation publishes, the kind and the grade. No game
+// fact is invented: a 250-count silver is a longer grind than a
+// one-mission bronze by arithmetic, and the card says "estimate".
+// minutes = rough hands-on time to earn it from zero; difficulty 1-5.
+const DIFFICULTY_OVERRIDES = {
+  17: 5, // The Shootist: gold in all 42 Shooting Range challenges
+  15: 3, // Cunning Stunts: 250 clean landings
+  18: 3, // Top Fun: win at all 14 drone locations
+  19: 3, // Earn Cash, Not Kudos: win 20 different races
+  36: 3, // Gunslinger: 5 takedowns in one Combat Focus
+  39: 3, // Sneakthief: undetected jewelry robbery
+  40: 3, // Maximum Withdrawal: 5 vaults + escapes
+  33: 3, // Hot Together: lose a 4-star wanted level with partner
+  34: 3, // Retail Therapy: 3 shops back-to-back, heat kept alive
+  1: 5,  // platinum: everything else first
+  14: 5, // A Long Road: 100% completion
+};
+function effortOf(t) {
+  const c = t.count;
+  let minutes, label;
+  if (t.id === 1) { minutes = 0; label = "automatic"; }
+  else if (t.id === 14) { minutes = 600; label = "endgame"; }
+  else if (c === null || c === undefined) {
+    if (t.kind === "story") { minutes = 30; label = "one mission"; }
+    else { minutes = 12; label = "quick"; }
+  } else if (c >= 100000) { minutes = 240; label = "long grind"; }
+  else if (c >= 250) { minutes = 300; label = "long grind"; }
+  else if (c >= 100) { minutes = 180; label = "long grind"; }
+  else if (c >= 42) { minutes = 150; label = "medium grind"; }
+  else if (c >= 14) { minutes = 90; label = "medium grind"; }
+  else if (c >= 5) { minutes = 45; label = "short session"; }
+  else { minutes = 25; label = "short session"; }
+  let difficulty = DIFFICULTY_OVERRIDES[t.id];
+  if (!difficulty) {
+    if (c === null || c === undefined) difficulty = t.kind === "story" ? 1 : 2;
+    else if (c >= 100) difficulty = 3;
+    else if (c >= 14) difficulty = 2;
+    else difficulty = 2;
+    if (t.grade === "silver" && difficulty < 3) difficulty = 3;
+  }
+  return { minutes, label, difficulty };
+}
+function fmtTime(minutes) {
+  if (minutes <= 0) return "automatic";
+  if (minutes < 60) return `~${minutes} min`;
+  const h = Math.round((minutes / 60) * 10) / 10;
+  return `~${Number.isInteger(h) ? h : h.toFixed(1)} h`;
+}
+function difficultyDots(d) {
+  return "●".repeat(d) + "○".repeat(5 - d);
+}
+// Remaining effort for one trophy: counted trophies scale with the
+// counter the player has already banked in this tracker.
+function remainingMinutes(t) {
+  if (state.earned.has(t.id)) return 0;
+  const e = effortOf(t);
+  if (t.count) {
+    const done = Math.min(state.counters[t.id] ?? 0, t.count);
+    return Math.round(e.minutes * (1 - done / t.count));
+  }
+  return e.minutes;
+}
 const GRADES = ["platinum", "gold", "silver", "bronze"];
 const GRADE_RANK = { platinum: 0, gold: 1, silver: 2, bronze: 3 };
-const SORTS = ["roadmap", "grade", "count", "name"];
+const SORTS = ["roadmap", "grade", "count", "name", "quick"];
 const STAGES = [
   { n: 1, title: "Story chapters & missions", text: "Gone Fishing, Chapters 1-4, the named missions (Breakfast Run, The Cartel Heist, Child's Play, Headliners, VCIA Takedown, Operation Savage Glory) and the final mission." },
   { n: 2, title: "Stranger strands", text: "Andy, Kenton, Billy, Randy and Tyrone plus Bret's hunt — 8 strands total. Do them as they appear; givers can move on." },
@@ -137,6 +208,9 @@ function applyUrlPreset() {
   if (query) state.query = query.trim().toLowerCase();
   if (q.get("hide") === "roadmap") document.body.classList.add("hide-roadmap");
   if (q.get("compact") === "1") document.body.classList.add("hide-panels");
+  const view = q.get("view");
+  if (view === "guide") document.body.classList.add("guide-view");
+  if (view === "roadmap") document.body.classList.add("roadmap-view");
 }
 
 function roadmapOrder(list) {
@@ -151,6 +225,8 @@ function sorted(list) {
     arr.sort((a, b) => ((b.count ?? -1) - (a.count ?? -1)) || (a.stage - b.stage) || (a.id - b.id));
   } else if (state.sort === "name") {
     arr.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (state.sort === "quick") {
+    arr.sort((a, b) => (remainingMinutes(a) - remainingMinutes(b)) || (a.stage - b.stage) || (a.id - b.id));
   } else {
     arr.sort((a, b) => (a.stage - b.stage) || (a.id - b.id));
   }
@@ -167,7 +243,7 @@ function visible(t) {
   if (state.grade !== "all" && t.grade !== state.grade) return false;
   if (state.hideEarned && state.earned.has(t.id)) return false;
   if (state.query) {
-    const hay = `${t.name} ${t.description}`.toLowerCase();
+    const hay = `${t.name} ${t.description} ${t.guide || ""} ${t.where || ""}`.toLowerCase();
     if (!hay.includes(state.query)) return false;
   }
   return true;
@@ -209,12 +285,24 @@ function renderHeader() {
   const missables = state.trophies.filter((t) => t.missable).length;
   const counted = state.trophies.filter((t) => t.count);
   const tracked = counted.reduce((sum, t) => sum + t.count, 0);
+  const trackedLeft = counted.reduce((sum, t) => sum + Math.max(0, t.count - Math.min(state.counters[t.id] ?? 0, t.count)), 0);
+  const timeLeft = state.trophies.reduce((sum, t) => sum + remainingMinutes(t), 0);
   el("stats-strip").innerHTML =
     `<span><b>${total}</b> trophies</span>` +
     `<span><b>${missables}</b> missable</span>` +
     `<span><b>${counted.length}</b> counters</span>` +
     `<span><b>${fmt(tracked)}</b> tracked items &amp; dollars</span>` +
+    `<span><b>${fmt(trackedLeft)}</b> still to go</span>` +
+    `<span><b>${fmtTime(timeLeft)}</b> estimated to platinum</span>` +
     `<span><b>28</b> hidden on PlayStation</span>`;
+  const kindLine = el("kind-line");
+  if (kindLine) {
+    kindLine.innerHTML = ["story", "collectibles", "activities", "meta"].map((k) => {
+      const all = state.trophies.filter((t) => t.kind === k);
+      const got = all.filter((t) => state.earned.has(t.id)).length;
+      return `<span>${k[0].toUpperCase() + k.slice(1)} <b>${got}/${all.length}</b></span>`;
+    }).join("");
+  }
 }
 
 function stageChip(t) {
@@ -238,6 +326,7 @@ function renderStages() {
       <div class="stage-count">${got} / ${all.length} trophies earned</div>
       ${miss ? `<div class="stage-warn">⚠ ${miss} missable in this stage</div>` : ""}
       ${tracked ? `<div class="stage-tracked">tracks ${fmt(tracked)} items &amp; dollars</div>` : ""}
+      <div class="stage-tracked">est. ${fmtTime(all.reduce((sum, t) => sum + remainingMinutes(t), 0))} left in this stage</div>
       <div class="stage-chips">${all.map(stageChip).join("")}</div>
     </li>`;
   }).join("");
@@ -267,6 +356,44 @@ function renderClosest() {
           </button>`;
         }).join("")
       : `<span class="closest-empty">No counter started yet — open a counted trophy below and set your progress.</span>`);
+}
+
+// Platinum Planner (round 4): what is left, stage by stage, with the
+// tracked items and estimated time still to go, plus session picks —
+// quick wins for a short sitting and the closest counters for a grind
+// session. Everything is computed live from the official counts and
+// the player's own saved counters; nothing is a game fact.
+function renderPlanner() {
+  const box = el("planner-body");
+  if (!box) return;
+  const rows = STAGES.map((s) => {
+    const all = state.trophies.filter((t) => t.stage === s.n);
+    const left = all.filter((t) => !state.earned.has(t.id));
+    const itemsLeft = left.reduce((sum, t) => sum + (t.count ? Math.max(0, t.count - Math.min(state.counters[t.id] ?? 0, t.count)) : 0), 0);
+    const mins = left.reduce((sum, t) => sum + remainingMinutes(t), 0);
+    const missLeft = left.filter((t) => t.missable).length;
+    return `<tr>
+      <td><b>Stage ${s.n}</b> ${s.title}</td>
+      <td>${all.length - left.length}/${all.length} earned</td>
+      <td>${left.length} left</td>
+      <td>${itemsLeft ? fmt(itemsLeft) + " items" : "—"}</td>
+      <td>${fmtTime(mins)}</td>
+      <td>${missLeft ? `⚠ ${missLeft} missable` : "—"}</td>
+    </tr>`;
+  }).join("");
+  const quickWins = state.trophies
+    .filter((t) => !state.earned.has(t.id) && remainingMinutes(t) > 0 && remainingMinutes(t) <= 15)
+    .sort((a, b) => (remainingMinutes(a) - remainingMinutes(b)) || (a.stage - b.stage))
+    .slice(0, 6);
+  const quickHtml = quickWins.length
+    ? quickWins.map((t) => `<button type="button" class="next-chip" data-jump="${t.id}">${displayName(t)} <span class="next-meta">${fmtTime(remainingMinutes(t))} · difficulty ${difficultyDots(effortOf(t).difficulty)}${t.missable ? " · missable" : ""}</span></button>`).join("")
+    : `<span class="closest-empty">No quick wins left — everything remaining is a grind or a story mission.</span>`;
+  const totalLeft = state.trophies.reduce((sum, t) => sum + remainingMinutes(t), 0);
+  const unearned = state.trophies.filter((t) => !state.earned.has(t.id)).length;
+  el("planner-note").textContent = `${unearned} trophies left · est. ${fmtTime(totalLeft)} of hands-on time to the platinum (estimates from the official counts)`;
+  box.innerHTML =
+    `<table class="planner-table"><thead><tr><th>Stage</th><th>Progress</th><th>Left</th><th>Items left</th><th>Est. time left</th><th>Risk</th></tr></thead><tbody>${rows}</tbody></table>` +
+    `<div class="planner-quick"><span class="next-label">Quick wins — a short session</span>${quickHtml}</div>`;
 }
 
 function renderSources() {
@@ -389,9 +516,15 @@ function noteHtml(t) {
 
 function guideHtml(t) {
   const steps = (t.steps || []).map((s) => `<li>${s}</li>`).join("");
+  const e = effortOf(t);
+  const order = roadmapOrder(state.trophies);
+  const idx = order.findIndex((x) => x.id === t.id);
+  const nextT = order[idx + 1];
+  const stageTitle = (STAGES.find((s) => s.n === t.stage) || {}).title || "";
   return `<div class="guide-body">
     ${t.missable && t.missable_reason ? `<p class="missable-note"><strong>Why it can be missed:</strong> ${t.missable_reason}</p>` : ""}
     ${t.where ? `<p class="where-line"><strong>Where:</strong> ${t.where}</p>` : ""}
+    <p class="effort-line"><strong>Effort:</strong> ${e.label} · est. ${fmtTime(e.minutes)} · difficulty ${difficultyDots(e.difficulty)} (${e.difficulty}/5) · roadmap stage ${t.stage} (${stageTitle})${nextT ? ` · next in roadmap: ${displayName(nextT)}` : ""}. <span class="effort-note">Time and difficulty are this guide's estimates from the official count and kind — the sources below back the facts.</span></p>
     <p>${t.guide}</p>
     ${steps ? `<ol class="steps">${steps}</ol>` : ""}
     ${sourceLine(t)}
@@ -413,6 +546,7 @@ function cardHtml(t) {
     `<span class="badge step">step ${stepOf.get(t.id) ?? "–"} of ${state.trophies.length}</span>`,
     t.missable ? `<span class="badge missable">missable</span>` : "",
     t.count ? `<span class="badge count">count: ${fmt(t.count)}</span>` : "",
+    `<span class="badge effort">⏱ ${fmtTime(effortOf(t).minutes)} · ${difficultyDots(effortOf(t).difficulty)}</span>`,
     state.notes[t.id] ? `<span class="badge note">✎ note</span>` : "",
   ].join("");
   return `<article class="card${earned ? " earned" : ""}" id="trophy-${t.id}">
@@ -478,6 +612,7 @@ function render() {
   renderHeader();
   renderStages();
   renderClosest();
+  renderPlanner();
   renderMissableWatch();
   renderSources();
   renderChips();
@@ -552,6 +687,16 @@ function wireControls() {
     saveProgress();
     render();
   });
+  const expandBtn = el("expand-all");
+  if (expandBtn) expandBtn.addEventListener("click", () => {
+    for (const t of state.trophies) state.open.add(t.id);
+    render();
+  });
+  const collapseBtn = el("collapse-all");
+  if (collapseBtn) collapseBtn.addEventListener("click", () => {
+    state.open.clear();
+    render();
+  });
   document.addEventListener("keydown", (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const tag = (e.target.tagName || "").toLowerCase();
@@ -569,6 +714,10 @@ function wireControls() {
     } else if (e.key === "a") {
       state.kind = "all";
       state.grade = "all";
+      render();
+    } else if (e.key === "e") {
+      if (state.open.size >= state.trophies.length) state.open.clear();
+      else for (const t of state.trophies) state.open.add(t.id);
       render();
     }
   });

@@ -1,9 +1,12 @@
 // Leonida Legend — make.fun entry program (Node 22, standard library only).
 // The guide lives in this repo's app/ folder: plain static files opened at
-// app/index.html, fully offline, holding the 55-trophy list, the 5-stage
-// roadmap with trophy chips, stage missable warnings and step numbers, a
-// Closest Counters planner strip, the Missable Watch panel, a Sources
-// panel, per-trophy progress counters with steppers, per-trophy notes,
+// app/index.html, fully offline, holding the 55-trophy list, the checklist
+// with per-trophy effort estimates and difficulty dots computed from the
+// official counts, the 5-stage roadmap with trophy chips, stage missable
+// warnings, step numbers and stage time estimates, a Platinum Planner
+// panel (what is left per stage, quick-win session picks), a Closest
+// Counters planner strip, the Missable Watch panel, a Sources panel,
+// per-trophy progress counters with steppers, per-trophy notes,
 // keyboard shortcuts and one cited guide per trophy in
 // app/data/trophies.json. This program hands the entry in: it copies app/
 // and screenshots/ to /output and writes /output/dossier.json with the
@@ -47,5 +50,6 @@ const shots = existsSync(shotsDir)
   ? readdirSync(shotsDir).filter((f) => /\.(jpe?g|png)$/i.test(f)).sort()
   : [];
 const dossierBytes = statSync(dossierPath).size;
+const appFiles = readdirSync(join(outputDir, "app"), { recursive: true }).length;
 console.log(`dossier written to ${dossierPath}`);
-console.log(`build summary: dossier ${dossierBytes} bytes, ${shots.length} screenshot(s): ${shots.join(", ") || "none"}`);
+console.log(`build summary: dossier ${dossierBytes} bytes, ${appFiles} app entries, ${shots.length} screenshot(s): ${shots.join(", ") || "none"}`);
