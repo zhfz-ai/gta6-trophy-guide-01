@@ -198,7 +198,8 @@ body.hide-roadmap .roadmap { display: none; }
 body.hide-panels .roadmap, body.hide-panels .missable-watch, body.hide-panels .sources-panel,
 body.hide-panels .stats-strip, body.hide-panels .actions, body.hide-panels .planner { display: none; }
 
-/* Round 4: effort badges/lines, Platinum Planner, view presets. */
+/* Round 4 additions: effort badge/line, Platinum Planner table, and the
+   two screenshot view presets (single guide large, roadmap on its own). */
 .badge.effort { color: var(--accent2); border-color: var(--accent2); }
 .effort-line { color: var(--text); }
 .effort-line strong { color: var(--accent); }
@@ -206,9 +207,9 @@ body.hide-panels .stats-strip, body.hide-panels .actions, body.hide-panels .plan
 .planner h2 { margin: 0 0 10px; font-size: 19px; }
 .planner-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .planner-table th {
-  text-align: left; color: var(--accent2); font-size: 12px;
-  text-transform: uppercase; letter-spacing: .6px;
   padding: 6px 8px; border-bottom: 1px solid var(--line);
+  color: var(--accent2); font-size: 12px; text-align: left;
+  text-transform: uppercase; letter-spacing: .6px;
 }
 .planner-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); color: var(--text); }
 .planner-table td:first-child { color: var(--muted); }

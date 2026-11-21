@@ -1,63 +1,89 @@
 // Leonida Legend — offline tracker for the 55 GTA VI PS5 trophies (round 4).
 // Loads data/trophies.json (this app's own file), keeps earned ticks,
 // per-trophy counter progress and per-trophy notes in localStorage, and
-// renders the checklist first — every card shows the official name,
-// description and grade plus an effort estimate and difficulty dots —
-// then the 5-stage roadmap with trophy chips, stage missable warnings,
-// tracked-item totals and per-stage time estimates, a Next Up strip, a
-// Closest Counters strip, a Platinum Planner table of what is left per
-// stage with quick-win session picks, a Missable Watch panel, a Sources
-// panel aggregating every cited source, kind/grade filters, five sort
-// orders (roadmap, grade, biggest count, name, quickest first), search
-// over names, descriptions and guide text, spoiler-safe mode,
-// expand/collapse-all, keyboard shortcuts, and one cited guide per
-// trophy (Where line, effort line, prose, numbered steps, sources with
-// notes, a note field, an honesty line).
+// puts the checklist first: every card shows the official name,
+// description and grade plus an effort estimate and difficulty dots
+// computed from the published counts. Below the list sit the 5-stage
+// roadmap (trophy chips, missable warnings, tracked-item totals, stage
+// time estimates), a Next Up strip, a Closest Counters strip, a Platinum
+// Planner table of what is left per stage with quick-win picks, a
+// Missable Watch panel and a Sources panel aggregating every cited
+// source. Filters cover kind and grade; five sort orders (roadmap,
+// grade, biggest count, name, quickest first); search reads names,
+// descriptions and guide text; spoiler-safe mode, expand/collapse-all
+// and keyboard shortcuts round it out. One cited guide per trophy:
+// Where line, effort line, prose, numbered steps, sources with notes,
+// a note field, an honesty line.
 // No network requests: the only fetch is the app's own data file.
 
 const STORAGE_KEY = "leonida-legend-progress-v2";
 const LEGACY_KEY = "leonida-legend-progress-v1";
 const KINDS = ["story", "missable", "collectibles", "activities", "meta"];
+const GRADES = ["platinum", "gold", "silver", "bronze"];
+const GRADE_RANK = { platinum: 0, gold: 1, silver: 2, bronze: 3 };
+const SORTS = ["roadmap", "grade", "count", "name", "quick"];
+const STAGES = [
+  { n: 1, title: "Story chapters & missions", text: "Gone Fishing, Chapters 1-4, the named missions (Breakfast Run, The Cartel Heist, Child's Play, Headliners, VCIA Takedown, Operation Savage Glory) and the final mission." },
+  { n: 2, title: "Stranger strands", text: "Andy, Kenton, Billy, Randy and Tyrone plus Bret's hunt — 8 strands total. Do them as they appear; givers can move on." },
+  { n: 3, title: "Activities & counts", text: "250 stunts, 42 Shooting Range golds, 20 race wins, 14 drone races, 50 challenges, robberies, partner trophies, money counters." },
+  { n: 4, title: "Collectibles & exploration", text: "3 card sets, 100 WAiNK It locations, 18 meditation spots, 100 vehicles, all 52 areas, 8 garage properties." },
+  { n: 5, title: "Endgame: 100% & platinum", text: "A Long Road (100% completion, gold) once everything above is done — then the platinum pops on its own." },
+];
 
-// Effort model (round 4): an estimated time-to-earn and a 1–5 difficulty
-// rating for every trophy, derived only from data already on the card —
-// the tracked count PlayStation publishes, the kind and the grade. No
-// game fact is invented: a 250-count grind is plainly longer than a
-// single story mission, and every estimate is labelled as one.
-const HARD_TROPHIES = {
-  17: 5, // The Shootist — gold in all 42 Shooting Range challenges
-  15: 3, // Cunning Stunts — 250 clean landings
-  18: 3, // Top Fun — win at all 14 drone locations
-  19: 3, // Earn Cash, Not Kudos — win 20 different races
-  36: 3, // Gunslinger — 5 takedowns inside one Combat Focus
-  39: 3, // Sneakthief — undetected jewelry robbery
-  40: 3, // Maximum Withdrawal — 5 vaults and escapes
-  33: 3, // Hot Together — lose a 4-star wanted level with a partner
-  34: 3, // Retail Therapy — 3 shops back to back, heat kept alive
-  1: 5,  // the platinum itself: everything else first
-  14: 5, // A Long Road — 100% completion
-};
+// --- Effort model (round 4) -------------------------------------------------
+// An estimated time-to-earn and a 1–5 difficulty rating per trophy,
+// derived only from data already printed on the card: the tracked count
+// PlayStation publishes, the kind and the grade. Nothing about the game
+// is invented — a 250-count grind is plainly longer than one story
+// mission — and every figure is labelled as an estimate. A few trophies
+// whose official descriptions demand precision (all-gold shooting range,
+// 100% completion, the platinum itself) carry a hand-set difficulty.
+const HARD_TROPHIES = new Map([
+  [1, 5],  // the platinum: everything else first
+  [14, 5], // A Long Road — 100% completion
+  [17, 5], // The Shootist — gold in all 42 Shooting Range challenges
+  [15, 3], // Cunning Stunts — 250 clean landings
+  [18, 3], // Top Fun — win at all 14 drone locations
+  [19, 3], // Earn Cash, Not Kudos — win 20 different races
+  [33, 3], // Hot Together — lose a 4-star wanted level with a partner
+  [34, 3], // Retail Therapy — 3 shops back to back, heat kept alive
+  [36, 3], // Gunslinger — 5 takedowns inside one Combat Focus
+  [39, 3], // Sneakthief — undetected jewelry robbery
+  [40, 3], // Maximum Withdrawal — 5 vaults and escapes
+]);
+
+// Count thresholds, biggest first: [minimum count, minutes, label].
+const COUNT_BANDS = [
+  [100000, 240, "long grind"],
+  [250, 300, "long grind"],
+  [100, 180, "long grind"],
+  [42, 150, "medium grind"],
+  [14, 90, "medium grind"],
+  [5, 45, "short session"],
+  [0, 25, "short session"],
+];
 
 function effortFor(t) {
-  const c = t.count;
   let minutes;
   let label;
-  if (t.id === 1) { minutes = 0; label = "automatic"; }
-  else if (t.id === 14) { minutes = 600; label = "endgame"; }
-  else if (c === null || c === undefined) {
+  if (t.id === 1) {
+    minutes = 0;
+    label = "automatic";
+  } else if (t.id === 14) {
+    minutes = 600;
+    label = "endgame";
+  } else if (t.count === null || t.count === undefined) {
     if (t.kind === "story") { minutes = 30; label = "one mission"; }
     else { minutes = 12; label = "quick"; }
-  } else if (c >= 100000) { minutes = 240; label = "long grind"; }
-  else if (c >= 250) { minutes = 300; label = "long grind"; }
-  else if (c >= 100) { minutes = 180; label = "long grind"; }
-  else if (c >= 42) { minutes = 150; label = "medium grind"; }
-  else if (c >= 14) { minutes = 90; label = "medium grind"; }
-  else if (c >= 5) { minutes = 45; label = "short session"; }
-  else { minutes = 25; label = "short session"; }
-  let difficulty = HARD_TROPHIES[t.id];
-  if (!difficulty) {
-    if (c === null || c === undefined) difficulty = t.kind === "story" ? 1 : 2;
-    else if (c >= 100) difficulty = 3;
+  } else {
+    const band = COUNT_BANDS.find(([min]) => t.count >= min);
+    minutes = band[1];
+    label = band[2];
+  }
+  let difficulty = HARD_TROPHIES.get(t.id);
+  if (difficulty === undefined) {
+    if (t.count === null || t.count === undefined) difficulty = t.kind === "story" ? 1 : 2;
+    else if (t.count >= 100) difficulty = 3;
     else difficulty = 2;
     if (t.grade === "silver" && difficulty < 3) difficulty = 3;
   }
@@ -75,8 +101,9 @@ function difficultyDots(d) {
   return "●".repeat(d) + "○".repeat(5 - d);
 }
 
-// Minutes still to go on one trophy: counted trophies scale down with
-// the counter progress the player has already banked in this tracker.
+// Minutes still to go on one trophy. Earned trophies cost nothing;
+// counted ones scale down with the progress already banked in the
+// saved counter, so the planner totals shrink as you play.
 function minutesLeft(t) {
   if (state.earned.has(t.id)) return 0;
   const base = effortFor(t).minutes;
@@ -86,16 +113,12 @@ function minutesLeft(t) {
   }
   return base;
 }
-const GRADES = ["platinum", "gold", "silver", "bronze"];
-const GRADE_RANK = { platinum: 0, gold: 1, silver: 2, bronze: 3 };
-const SORTS = ["roadmap", "grade", "count", "name", "quick"];
-const STAGES = [
-  { n: 1, title: "Story chapters & missions", text: "Gone Fishing, Chapters 1-4, the named missions (Breakfast Run, The Cartel Heist, Child's Play, Headliners, VCIA Takedown, Operation Savage Glory) and the final mission." },
-  { n: 2, title: "Stranger strands", text: "Andy, Kenton, Billy, Randy and Tyrone plus Bret's hunt — 8 strands total. Do them as they appear; givers can move on." },
-  { n: 3, title: "Activities & counts", text: "250 stunts, 42 Shooting Range golds, 20 race wins, 14 drone races, 50 challenges, robberies, partner trophies, money counters." },
-  { n: 4, title: "Collectibles & exploration", text: "3 card sets, 100 WAiNK It locations, 18 meditation spots, 100 vehicles, all 52 areas, 8 garage properties." },
-  { n: 5, title: "Endgame: 100% & platinum", text: "A Long Road (100% completion, gold) once everything above is done — then the platinum pops on its own." },
-];
+
+// Tracked items still to go on one trophy (0 for uncounted trophies).
+function itemsLeft(t) {
+  if (!t.count || state.earned.has(t.id)) return 0;
+  return Math.max(0, t.count - Math.min(state.counters[t.id] ?? 0, t.count));
+}
 
 const state = {
   trophies: [],
@@ -211,6 +234,8 @@ function applyUrlPreset() {
   if (query) state.query = query.trim().toLowerCase();
   if (q.get("hide") === "roadmap") document.body.classList.add("hide-roadmap");
   if (q.get("compact") === "1") document.body.classList.add("hide-panels");
+  // Round 4 view presets for the screenshot sheet: one guide large, or
+  // the roadmap + planner panels on their own.
   const view = q.get("view");
   if (view === "guide") document.body.classList.add("guide-view");
   if (view === "roadmap") document.body.classList.add("roadmap-view");
@@ -285,11 +310,18 @@ function renderHeader() {
     const got = all.filter((t) => state.earned.has(t.id)).length;
     return `<span>${g[0].toUpperCase() + g.slice(1)} <b>${got}/${all.length}</b></span>`;
   }).join("");
+  const kindLine = el("kind-line");
+  if (kindLine) {
+    kindLine.innerHTML = ["story", "collectibles", "activities", "meta"].map((k) => {
+      const all = state.trophies.filter((t) => t.kind === k);
+      const got = all.filter((t) => state.earned.has(t.id)).length;
+      return `<span>${k[0].toUpperCase() + k.slice(1)} <b>${got}/${all.length}</b></span>`;
+    }).join("");
+  }
   const missables = state.trophies.filter((t) => t.missable).length;
   const counted = state.trophies.filter((t) => t.count);
   const tracked = counted.reduce((sum, t) => sum + t.count, 0);
-  const trackedLeft = counted.reduce(
-    (sum, t) => sum + Math.max(0, t.count - Math.min(state.counters[t.id] ?? 0, t.count)), 0);
+  const trackedLeft = counted.reduce((sum, t) => sum + itemsLeft(t), 0);
   const timeLeft = state.trophies.reduce((sum, t) => sum + minutesLeft(t), 0);
   el("stats-strip").innerHTML =
     `<span><b>${total}</b> trophies</span>` +
@@ -299,14 +331,6 @@ function renderHeader() {
     `<span><b>${fmt(trackedLeft)}</b> still to go</span>` +
     `<span><b>${fmtDuration(timeLeft)}</b> estimated to platinum</span>` +
     `<span><b>28</b> hidden on PlayStation</span>`;
-  const kindLine = el("kind-line");
-  if (kindLine) {
-    kindLine.innerHTML = ["story", "collectibles", "activities", "meta"].map((k) => {
-      const all = state.trophies.filter((t) => t.kind === k);
-      const got = all.filter((t) => state.earned.has(t.id)).length;
-      return `<span>${k[0].toUpperCase() + k.slice(1)} <b>${got}/${all.length}</b></span>`;
-    }).join("");
-  }
 }
 
 function stageChip(t) {
@@ -322,6 +346,7 @@ function renderStages() {
     const pct = all.length ? Math.round((got / all.length) * 100) : 0;
     const miss = all.filter((t) => t.missable).length;
     const tracked = all.reduce((sum, t) => sum + (t.count || 0), 0);
+    const stageMins = all.reduce((sum, t) => sum + minutesLeft(t), 0);
     return `<li class="stage">
       <div class="stage-num">Stage ${s.n}</div>
       <h3>${s.title}</h3>
@@ -330,7 +355,7 @@ function renderStages() {
       <div class="stage-count">${got} / ${all.length} trophies earned</div>
       ${miss ? `<div class="stage-warn">⚠ ${miss} missable in this stage</div>` : ""}
       ${tracked ? `<div class="stage-tracked">tracks ${fmt(tracked)} items &amp; dollars</div>` : ""}
-      <div class="stage-tracked">est. ${fmtDuration(all.reduce((sum, t) => sum + minutesLeft(t), 0))} left in this stage</div>
+      <div class="stage-tracked">est. ${fmtDuration(stageMins)} left in this stage</div>
       <div class="stage-chips">${all.map(stageChip).join("")}</div>
     </li>`;
   }).join("");
@@ -363,8 +388,8 @@ function renderClosest() {
 }
 
 // Platinum Planner (round 4): what is still left, stage by stage —
-// trophies, tracked items, estimated time and missable risk — plus
-// quick-win picks for a short sitting. Every number is computed live
+// trophies, tracked items, estimated time, missable risk — plus
+// quick-win picks for a short sitting. Every figure is computed live
 // from the official counts and the player's own saved counters.
 function renderPlanner() {
   const box = el("planner-body");
@@ -372,15 +397,14 @@ function renderPlanner() {
   const rows = STAGES.map((s) => {
     const all = state.trophies.filter((t) => t.stage === s.n);
     const left = all.filter((t) => !state.earned.has(t.id));
-    const itemsLeft = left.reduce(
-      (sum, t) => sum + (t.count ? Math.max(0, t.count - Math.min(state.counters[t.id] ?? 0, t.count)) : 0), 0);
+    const items = left.reduce((sum, t) => sum + itemsLeft(t), 0);
     const mins = left.reduce((sum, t) => sum + minutesLeft(t), 0);
     const missLeft = left.filter((t) => t.missable).length;
     return `<tr>
       <td><b>Stage ${s.n}</b> ${s.title}</td>
       <td>${all.length - left.length}/${all.length} earned</td>
       <td>${left.length} left</td>
-      <td>${itemsLeft ? fmt(itemsLeft) + " items" : "—"}</td>
+      <td>${items ? fmt(items) + " items" : "—"}</td>
       <td>${fmtDuration(mins)}</td>
       <td>${missLeft ? `⚠ ${missLeft} missable` : "—"}</td>
     </tr>`;
@@ -544,6 +568,7 @@ function cardHtml(t) {
   const name = hidden ? "Hidden story trophy" : t.name;
   const desc = hidden ? "Name and description hidden until earned (spoiler-safe mode)." : t.description;
   const open = state.open.has(t.id);
+  const eff = effortFor(t);
   const badges = [
     `<span class="badge grade-${t.grade}">${t.grade}</span>`,
     `<span class="badge">${t.kind}</span>`,
@@ -551,7 +576,7 @@ function cardHtml(t) {
     `<span class="badge step">step ${stepOf.get(t.id) ?? "–"} of ${state.trophies.length}</span>`,
     t.missable ? `<span class="badge missable">missable</span>` : "",
     t.count ? `<span class="badge count">count: ${fmt(t.count)}</span>` : "",
-    `<span class="badge effort">⏱ ${fmtDuration(effortFor(t).minutes)} · ${difficultyDots(effortFor(t).difficulty)}</span>`,
+    `<span class="badge effort">⏱ ${fmtDuration(eff.minutes)} · ${difficultyDots(eff.difficulty)}</span>`,
     state.notes[t.id] ? `<span class="badge note">✎ note</span>` : "",
   ].join("");
   return `<article class="card${earned ? " earned" : ""}" id="trophy-${t.id}">
