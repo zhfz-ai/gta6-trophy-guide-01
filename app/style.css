@@ -197,13 +197,19 @@ button.danger { color: var(--danger); }
 body.hide-roadmap .roadmap { display: none; }
 body.hide-panels .roadmap, body.hide-panels .missable-watch, body.hide-panels .sources-panel,
 body.hide-panels .stats-strip, body.hide-panels .actions, body.hide-panels .planner { display: none; }
+
+/* Round 4: effort badges/lines, Platinum Planner, view presets. */
 .badge.effort { color: var(--accent2); border-color: var(--accent2); }
 .effort-line { color: var(--text); }
 .effort-line strong { color: var(--accent); }
 .effort-note { color: var(--muted); font-style: italic; font-size: 12px; }
 .planner h2 { margin: 0 0 10px; font-size: 19px; }
 .planner-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-.planner-table th { text-align: left; color: var(--accent2); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.planner-table th {
+  text-align: left; color: var(--accent2); font-size: 12px;
+  text-transform: uppercase; letter-spacing: .6px;
+  padding: 6px 8px; border-bottom: 1px solid var(--line);
+}
 .planner-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); color: var(--text); }
 .planner-table td:first-child { color: var(--muted); }
 .planner-table td:first-child b { color: var(--text); }

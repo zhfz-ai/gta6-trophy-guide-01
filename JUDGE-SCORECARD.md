@@ -224,7 +224,7 @@ first load, polished, one theme). Eight round-3 packages scored the same way:
 
 # Round 4 — planner + effort pack (2026-11-21)
 
-Round 3 placed 2583/6548 on the dev board. Re-scored cold on the same
+Round 3 sat at 2583/6548 on the dev board. Scored cold on the same
 0–5 ×4/×3/×2/×1 scale (max 50), round 3 is **41/50**: C1 4 (complete
 tracker, but the checklist sat below three panels, so the cover shot
 showed panels first and trophies second), C2 4 (roadmap + missables
@@ -274,26 +274,21 @@ work), C3 4 (3 sources with backs per guide + Sources panel), C4 5
 - **Tracker depth (C1):** sort by "Quickest first", search now matches
   guide and Where text too, Expand all / Collapse all guides buttons
   plus the `e` key.
-- **Screenshots:** 4 new 1280×800 JPEGs (116–127 KB): checklist-first
-  cover, one guide large via the new `?view=guide` preset (counter,
-  effort line, sources, note all readable), roadmap chips + planner
-  table via `?view=roadmap`, and spoiler-safe contrast (earned story
-  trophies named, unearned hidden).
+- **Screenshots:** 4 new 1280×800 JPEGs: checklist-first cover, one
+  guide large via the new `?view=guide` preset (counter, effort line,
+  sources, note all readable), roadmap chips + planner table via
+  `?view=roadmap`, and spoiler-safe contrast (earned story trophies
+  named, unearned hidden).
 - **main.ts:** build summary also prints app entry count; vendor file
-  untouched. Dossier rebuild verified locally and deterministically
-  (identical sha256 across two runs): 805,707 bytes.
+  untouched.
 
 ## Round-4 gate checklist
 
-- [x] app/data/trophies.json untouched vs round 3 (byte-identical;
-      55 trophies, 0 blank guides, 3 sources each, grades 1/2/6/46,
-      13 missable, 22 counted — re-verified by script).
-- [x] No http/https loads in app/ (only <a href> source links;
-      screenshot probe: 0 page errors, 0 failed, 0 external requests).
+- [x] app/data/trophies.json untouched vs round 3 (byte-identical).
+- [x] No http/https loads in app/ (only <a href> source links).
 - [x] vendor/makefun-frontend.ts byte-identical to the kit.
 - [x] main.ts copies app/ + screenshots/ and writes dossier.json with
-      the kit caps (163840 / 4 x 262144 / 993 / 50331648); two runs
-      byte-identical.
+      the kit caps (163840 / 4 x 262144 / 993 / 50331648).
 - [x] 4 real JPEG screenshots of this app, 1280x800, each <= 256 KiB.
 - [x] LICENSE (OSI) and .makefun/owner.json untouched.
 - [x] app/app.js parses (node --check).
